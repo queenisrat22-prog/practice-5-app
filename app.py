@@ -50,7 +50,10 @@ def run_one(no, mob):
         st.write(">>> প্রথম Continue চাপা হয়েছে")
         time.sleep(10)
         text = driver.find_element(By.TAG_NAME, "body").text
-        st.write(text[:400])
+        st.write(text[:500])
+        driver.save_screenshot("/tmp/page1.png")
+        st.image("/tmp/page1.png", caption="প্রথম Continue-র পর পাতা")
+        st.write(">>> পাতায় Get code via SMS লেখা আছে কি:", "Get code via SMS" in text)
         if "Choose your account" in text:
             st.write(">>> Choose your account পাতা এসেছে")
             rows = driver.find_elements(By.XPATH, "//*[@role='button']")
@@ -71,22 +74,26 @@ def run_one(no, mob):
             driver.execute_script("arguments[0].click();", accounts[pick])
             st.write(">>> যেকোনো একটা সিলেক্ট হয়েছে")
             time.sleep(5)
-        els = driver.find_elements(By.XPATH, "//*[normalize-space()='Get code via SMS']")
-        if len(els) > 0:
+            text = driver.find_element(By.TAG_NAME, "body").text
+            st.write(text[:500])
+            driver.save_screenshot("/tmp/page2.png")
+            st.image("/tmp/page2.png", caption="অ্যাকাউন্ট সিলেক্টের পর পাতা")
+        if "Get code via SMS" in text:
             st.write(">>> Get code via SMS পাতায় আছে")
-            driver.execute_script("arguments[0].click();", els[0])
-            st.write(">>> Get code via SMS সিলেক্ট করলাম")
+            els = driver.find_elements(By.XPATH, "//*[normalize-space()='Get code via SMS']")
+            if len(els) > 0:
+                driver.execute_script("arguments[0].click();", els[0])
+                st.write(">>> Get code via SMS সিলেক্ট করলাম")
+            time.sleep(2)
+            btn2 = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//*[normalize-space()='Continue']")))
+            btn2.click()
+            st.write(">>> দ্বিতীয় Continue চাপা হয়েছে")
+            time.sleep(4)
+            text2 = driver.find_element(By.TAG_NAME, "body").text
+            st.write(text2[:500])
         else:
             st.write(">>> Get code via SMS পাতায় নেই, বাদ দিলাম")
-            driver.quit()
-            return
-        time.sleep(2)
-        btn2 = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//*[normalize-space()='Continue']")))
-        btn2.click()
-        st.write(">>> দ্বিতীয় Continue চাপা হয়েছে")
-        time.sleep(4)
-        text2 = driver.find_element(By.TAG_NAME, "body").text
-        st.write(text2[:500])
+            st.write(">>> কারণ: এই পাতায় No account found লেখা, অ্যাকাউন্ট পায়নি")
         st.write(">>> এখানেই থামো")
     except Exception as e:
         st.write(">>> ভুল হয়েছে:", str(e)[:300])
