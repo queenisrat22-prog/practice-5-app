@@ -53,6 +53,20 @@ def get_mobile(i, mobiles):
     except:
         return mobiles[0]
 
+def shot(driver, no, name):
+    if want_shot:
+        path = f"/tmp/shot_{no}_{name}.png"
+        driver.save_screenshot(path)
+        st.image(path, caption=f"ব্রাউজার {no} - {name}")
+
+def click_continue(driver):
+    try:
+        btn = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//*[normalize-space()='Continue']")))
+        btn.click()
+        return True
+    except:
+        return False
+
 def run_one(no, mob):
     log(f">>> ব্রাউজার {no} খুলছে")
     options = Options()
@@ -67,6 +81,7 @@ def run_one(no, mob):
         driver.get("https://www.facebook.com/login/identify/?ctx=recover&ars=facebook_login&from_login_screen=0")
         time.sleep(5)
         log(">>> পাতা খুলেছে")
+        shot(driver, no, "1-পাতা-খুলেছে")
         boxes = driver.find_elements(By.TAG_NAME, "input")
         box = None
         for b in boxes:
@@ -76,18 +91,16 @@ def run_one(no, mob):
         box.click()
         box.send_keys(mob)
         log(">>> বক্সে লেখা হয়েছে")
+        shot(driver, no, "2-বক্সে-লেখা")
         time.sleep(2)
-        btn1 = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//*[normalize-space()='Continue']")))
-        btn1.click()
-        log(">>> প্রথম Continue চাপা হয়েছে")
+        if click_continue(driver):
+            log(">>> প্রথম Continue চাপা হয়েছে")
+        else:
+            log(">>> প্রথম Continue পাওয়া যায়নি")
         time.sleep(10)
         text = driver.find_element(By.TAG_NAME, "body").text
-        log(">>> পাতার লেখা:")
         log(text[:300])
-        if want_shot:
-            driver.save_screenshot(f"/tmp/page_{no}_1.png")
-            st.image(f"/tmp/page_{no}_1.png", caption=f"ব্রাউজার {no} - প্রথম Continue-র পর")
-        log(f">>> পাতায় Get code via SMS আছে কি: {'Get code via SMS' in text}")
+        shot(driver, no, "3-প্রথম-Continue-র-পর")
         if "Choose your account" in text:
             log(">>> Choose your account পাতা এসেছে")
             rows = driver.find_elements(By.XPATH, "//*[@role='button']")
@@ -108,26 +121,37 @@ def run_one(no, mob):
             driver.execute_script("arguments[0].click();", accounts[pick])
             log(">>> যেকোনো একটা সিলেক্ট হয়েছে")
             time.sleep(5)
+            shot(driver, no, "4-অ্যাকাউন্ট-সিলেক্ট")
             text = driver.find_element(By.TAG_NAME, "body").text
             log(text[:300])
-            if want_shot:
-                driver.save_screenshot(f"/tmp/page_{no}_2.png")
-                st.image(f"/tmp/page_{no}_2.png", caption=f"ব্রাউজার {no} - অ্যাকাউন্ট সিলেক্টের পর")
-        if "Get code via SMS" in text:
-            log(">>> Get code via SMS পাতায় আছে")
-            els = driver.find_elements(By.XPATH, "//*[normalize-space()='Get code via SMS']")
+            if "Choose your account" in text:
+                log(">>> এখনো Choose your account পাতায় আছে, Continue চাপছি")
+                if click_continue(driver):
+                    log(">>> অ্যাকাউন্ট পাতার Continue চাপা হয়েছে")
+                time.sleep(5)
+                text = driver.find_element(By.TAG_NAME, "body").text
+                log(text[:300])
+                shot(driver, no, "5-অ্যাকাউন্ট-Continue-র-পর")
+        log(f">>> তুমি বেছেছো: {method}")
+        log(f">>> পাতায় {method} আছে কি: {method in text}")
+        if method in text:
+            log(f">>> {method} পাতায় আছে")
+            els = driver.find_elements(By.XPATH, f"//*[contains(text(), '{method}')]")
             if len(els) > 0:
                 driver.execute_script("arguments[0].click();", els[0])
-                log(">>> Get code via SMS সিলেক্ট করলাম")
+                log(f">>> {method} সিলেক্ট করলাম")
+            shot(driver, no, "6-উপায়-সিলেক্ট")
             time.sleep(2)
-            btn2 = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//*[normalize-space()='Continue']")))
-            btn2.click()
-            log(">>> দ্বিতীয় Continue চাপা হয়েছে")
+            if click_continue(driver):
+                log(">>> দ্বিতীয় Continue চাপা হয়েছে")
+            else:
+                log(">>> দ্বিতীয় Continue পাওয়া যায়নি")
             time.sleep(4)
             text2 = driver.find_element(By.TAG_NAME, "body").text
             log(text2[:300])
+            shot(driver, no, "7-দ্বিতীয়-Continue-র-পর")
         else:
-            log(">>> Get code via SMS পাতায় নেই, বাদ দিলাম")
+            log(f">>> {method} পাতায় নেই, বাদ দিলাম")
         log(">>> এখানেই থামো")
     except Exception as e:
         log(f">>> ভুল হয়েছে: {str(e)[:200]}")
