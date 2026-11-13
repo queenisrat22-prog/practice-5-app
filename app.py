@@ -8,21 +8,53 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 st.set_page_config(page_title="HACKER FIND", layout="centered")
-st.markdown("<h1 style='text-align:center; border:2px solid #00ff00; padding:10px; color:#00ff00;'>HACKER FIND</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align:right; color:#00ff00;'>NIGHT MODE • PRACTICE • SAFE</p>", unsafe_allow_html=True)
 
-mobile = st.text_input("মোবাইল")
+st.markdown("""
+<style>
+.stApp {background-color: #000000;}
+h1 {color: #00ff00 !important;}
+label {color: #00ff00 !important;}
+.stButton>button {background-color: #00ff00; color: #000000; font-weight: bold;}
+.logbox {background-color: #000000; border: 1px solid #00ff00; color: #00ff00; font-family: monospace; padding: 10px; white-space: pre-wrap;}
+</style>
+""", unsafe_allow_html=True)
+
+st.markdown("<h1 style='text-align:center; border:2px solid #00ff00; padding:10px;'>HACKER FIND</h1>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:right; color:#00ff00;'>NIGHT MODE • PRACTICE • SAFE</p>", unsafe_allow_html=True)
+st.markdown("<p style='color:#00ff00;'>• তৈরি</p>", unsafe_allow_html=True)
+
+mobile_text = st.text_input("মোবাইল", placeholder="01700000000,01700000001,01700000002")
 browser_count = st.number_input("ব্রাউজার সংখ্যা", min_value=1, value=1)
 typing = st.selectbox("টাইপের ধরন", ["টাইপ করে লেখা", "রোল দিয়ে"])
 method = st.selectbox("লগইন উপায়", ["Get code via SMS", "Get code via email"])
 finder = st.selectbox("বাটন খোঁজার উপায়", ["role", "text", "xpath"])
 same_mobile = st.checkbox("সব ব্রাউজারে একই মোবাইল")
-sequential = st.checkbox("একটা শেষে আরেকটা খুলবে")
+sequential = st.checkbox("একটা শেষে আরেকটা খুলবে", value=True)
 history_close = st.checkbox("কাজ শেষে হিস্ট্রি মুছে বন্ধ হবে")
 view = st.checkbox("View", value=True)
+want_shot = st.checkbox("প্রতিটার স্ক্রিনশট চাই")
+
+log_lines = []
+log_box = st.empty()
+
+def log(msg):
+    log_lines.append(msg)
+    txt = "\n".join(log_lines)
+    log_box.markdown(f"<div class='logbox'>{txt}</div>", unsafe_allow_html=True)
+
+def get_mobile(i, mobiles):
+    if same_mobile:
+        return mobiles[0]
+    if i < len(mobiles):
+        return mobiles[i]
+    try:
+        base = int(mobiles[0])
+        return str(base + i).zfill(11)
+    except:
+        return mobiles[0]
 
 def run_one(no, mob):
-    st.write(f">>> ব্রাউজার {no} খুলছে")
+    log(f">>> ব্রাউজার {no} খুলছে")
     options = Options()
     options.add_argument('--headless=new')
     options.add_argument('--no-sandbox')
@@ -34,7 +66,7 @@ def run_one(no, mob):
     try:
         driver.get("https://www.facebook.com/login/identify/?ctx=recover&ars=facebook_login&from_login_screen=0")
         time.sleep(5)
-        st.write(">>> পাতা খুলেছে")
+        log(">>> পাতা খুলেছে")
         boxes = driver.find_elements(By.TAG_NAME, "input")
         box = None
         for b in boxes:
@@ -43,19 +75,21 @@ def run_one(no, mob):
                 break
         box.click()
         box.send_keys(mob)
-        st.write(">>> বক্সে লেখা হয়েছে")
+        log(">>> বক্সে লেখা হয়েছে")
         time.sleep(2)
         btn1 = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//*[normalize-space()='Continue']")))
         btn1.click()
-        st.write(">>> প্রথম Continue চাপা হয়েছে")
+        log(">>> প্রথম Continue চাপা হয়েছে")
         time.sleep(10)
         text = driver.find_element(By.TAG_NAME, "body").text
-        st.write(text[:500])
-        driver.save_screenshot("/tmp/page1.png")
-        st.image("/tmp/page1.png", caption="প্রথম Continue-র পর পাতা")
-        st.write(">>> পাতায় Get code via SMS লেখা আছে কি:", "Get code via SMS" in text)
+        log(">>> পাতার লেখা:")
+        log(text[:300])
+        if want_shot:
+            driver.save_screenshot(f"/tmp/page_{no}_1.png")
+            st.image(f"/tmp/page_{no}_1.png", caption=f"ব্রাউজার {no} - প্রথম Continue-র পর")
+        log(f">>> পাতায় Get code via SMS আছে কি: {'Get code via SMS' in text}")
         if "Choose your account" in text:
-            st.write(">>> Choose your account পাতা এসেছে")
+            log(">>> Choose your account পাতা এসেছে")
             rows = driver.find_elements(By.XPATH, "//*[@role='button']")
             accounts = []
             for r in rows:
@@ -65,45 +99,51 @@ def run_one(no, mob):
                 if t in ["বাংলা", "অসমীয়া", "हिन्दी", "नेपाली", "Bahasa Indonesia", "العربية", "More languages…"]:
                     continue
                 accounts.append(r)
-            st.write(">>> অ্যাকাউন্ট সংখ্যা:", len(accounts))
+            log(f">>> অ্যাকাউন্ট সংখ্যা: {len(accounts)}")
             pick = 1
             if len(accounts) <= 1:
                 pick = 0
             driver.execute_script("arguments[0].scrollIntoView(true);", accounts[pick])
             time.sleep(1)
             driver.execute_script("arguments[0].click();", accounts[pick])
-            st.write(">>> যেকোনো একটা সিলেক্ট হয়েছে")
+            log(">>> যেকোনো একটা সিলেক্ট হয়েছে")
             time.sleep(5)
             text = driver.find_element(By.TAG_NAME, "body").text
-            st.write(text[:500])
-            driver.save_screenshot("/tmp/page2.png")
-            st.image("/tmp/page2.png", caption="অ্যাকাউন্ট সিলেক্টের পর পাতা")
+            log(text[:300])
+            if want_shot:
+                driver.save_screenshot(f"/tmp/page_{no}_2.png")
+                st.image(f"/tmp/page_{no}_2.png", caption=f"ব্রাউজার {no} - অ্যাকাউন্ট সিলেক্টের পর")
         if "Get code via SMS" in text:
-            st.write(">>> Get code via SMS পাতায় আছে")
+            log(">>> Get code via SMS পাতায় আছে")
             els = driver.find_elements(By.XPATH, "//*[normalize-space()='Get code via SMS']")
             if len(els) > 0:
                 driver.execute_script("arguments[0].click();", els[0])
-                st.write(">>> Get code via SMS সিলেক্ট করলাম")
+                log(">>> Get code via SMS সিলেক্ট করলাম")
             time.sleep(2)
             btn2 = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//*[normalize-space()='Continue']")))
             btn2.click()
-            st.write(">>> দ্বিতীয় Continue চাপা হয়েছে")
+            log(">>> দ্বিতীয় Continue চাপা হয়েছে")
             time.sleep(4)
             text2 = driver.find_element(By.TAG_NAME, "body").text
-            st.write(text2[:500])
+            log(text2[:300])
         else:
-            st.write(">>> Get code via SMS পাতায় নেই, বাদ দিলাম")
-            st.write(">>> কারণ: এই পাতায় No account found লেখা, অ্যাকাউন্ট পায়নি")
-        st.write(">>> এখানেই থামো")
+            log(">>> Get code via SMS পাতায় নেই, বাদ দিলাম")
+        log(">>> এখানেই থামো")
     except Exception as e:
-        st.write(">>> ভুল হয়েছে:", str(e)[:300])
+        log(f">>> ভুল হয়েছে: {str(e)[:200]}")
     finally:
         driver.quit()
-        st.write(f">>> ব্রাউজার {no} এর কাজ শেষ")
+        log(f">>> ব্রাউজার {no} এর কাজ শেষ")
 
 if st.button("START"):
-    if mobile.strip() == "":
-        st.write(">>> মোবাইল লেখো, বক্স খালি আছে")
+    mobiles = [m.strip() for m in mobile_text.split(",") if m.strip() != ""]
+    if len(mobiles) == 0:
+        log(">>> মোবাইল লেখো, বক্স খালি আছে")
     else:
-        st.write(">>> শুরু হচ্ছে")
-        run_one(1, mobile.strip())
+        log(">>> শুরু হচ্ছে")
+        log(f">>> মোট নম্বর: {len(mobiles)}, ব্রাউজার: {browser_count}")
+        for i in range(int(browser_count)):
+            mob = get_mobile(i, mobiles)
+            run_one(i+1, mob)
+            if sequential:
+                log(f">>> ব্রাউজার {i+1} পুরো শেষ, তারপর পরেরটা")
